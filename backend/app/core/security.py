@@ -34,20 +34,20 @@ def _create_token(user_id: int, token_type: str, lifetime: timedelta) -> str:
         "exp": now + lifetime,
         "jti": uuid.uuid4().hex,      # unique id, useful for revocation later
     }
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def create_access_token(user_id: int) -> str:
-    return _create_token(user_id, "access", timedelta(minutes=settings.ACCESS_TOKEN_MINUTES))
+    return _create_token(user_id, "access", timedelta(minutes=settings.access_token_minutes))
 
 
 def create_refresh_token(user_id: int) -> str:
-    return _create_token(user_id, "refresh", timedelta(days=settings.REFRESH_TOKEN_DAYS))
+    return _create_token(user_id, "refresh", timedelta(days=settings.refresh_token_days))
 
 
 def decode_token(token: str, expected_type: str) -> dict:
     """Raises jwt.ExpiredSignatureError / jwt.InvalidTokenError on any problem."""
-    payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     if payload.get("type") != expected_type:
         raise jwt.InvalidTokenError("wrong token type")
     return payload

@@ -4,8 +4,11 @@ from fastapi import Depends
 from app.core.db import get_db
 from app.core.redis_client import redis_client
 from sqlalchemy import text
+from app.api import auth
 
 app= FastAPI(title="Seat Lock")
+app.include_router(auth.router)
+
 @app.get('/health/db')
 async def health(db: AsyncSession=Depends(get_db)):
     result = await db.execute(text("SELECT 1"))
