@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from app.core.security import hash_password
 
 from sqlalchemy import text
 
@@ -26,7 +27,7 @@ async def main() -> None:
         organizer = User(
             username="organizer1",
             email="organizer@example.com",
-            password_hash="PLACEHOLDER-replace-when-auth-exists",
+            password_hash=hash_password("organizer123"),
             role=UserRole.ORGANIZER,
         )
         session.add(organizer)
