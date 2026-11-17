@@ -1,6 +1,6 @@
 import string
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -102,3 +102,12 @@ async def create_seats(
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Seats already exist for this event")
     return seats
+
+@router.get("", response_model=list[EventOut])
+async def list_events(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Event).order_by(Event.id).limit(limit).offset(offset))
+    return result.scalars().all()
