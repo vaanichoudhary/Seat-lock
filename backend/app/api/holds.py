@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.db import get_db
-from app.models import Event, Seat, SeatStatus, User
+from app.models import BookingSeat, Event, Seat, SeatStatus, User
 from app.schemas.holds import HoldRequest, HoldResponse, ReleaseResponse
 
 router = APIRouter(prefix="/events", tags=["holds"])
@@ -76,13 +76,16 @@ async def release_seats(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # give back every seat this user is holding for this event
+    # give back every seat this user is holding for this event,
+    # except seats already in a booking (cancel the booking to free those)
+    in_booking = select(BookingSeat.seat_id).where(BookingSeat.active)
     result = await db.execute(
         update(Seat)
         .where(
             Seat.event_id == event_id,
             Seat.held_by_user_id == user.id,
             Seat.status == SeatStatus.HELD,
+            Seat.id.not_in(in_booking),
         )
         .values(status=SeatStatus.AVAILABLE, held_by_user_id=None, held_until=None)
     )

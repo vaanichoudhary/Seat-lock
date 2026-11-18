@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 7
     hold_minutes: int = 5
+    payment_webhook_secret: str
     model_config = SettingsConfigDict(env_file=ROOT_DIR/".env", extra="ignore")
 
 settings= Settings()
