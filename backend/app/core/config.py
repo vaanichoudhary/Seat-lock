@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     jwt_algorithm : str = "HS256"
     access_token_minutes: int = 15
     refresh_token_days: int = 7
+    hold_minutes: int = 5
     model_config = SettingsConfigDict(env_file=ROOT_DIR/".env", extra="ignore")
 
 settings= Settings()
