@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     refresh_token_days: int = 7
     hold_minutes: int = 5
     payment_webhook_secret: str
+    run_workers: bool = True             # set RUN_WORKERS=false to start the API without background jobs
+    cleanup_interval_seconds: int = 30
+    outbox_interval_seconds: int = 5
+    outbox_max_attempts: int = 5
     model_config = SettingsConfigDict(env_file=ROOT_DIR/".env", extra="ignore")
 
 settings= Settings()
