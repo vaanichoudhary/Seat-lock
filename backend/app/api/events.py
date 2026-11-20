@@ -63,7 +63,7 @@ async def update_event(
     starts_at = changes.get("starts_at", event.starts_at)
     sale_opens_at = changes.get("sale_opens_at", event.sale_opens_at)
     if sale_opens_at >= starts_at:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "sale_opens_at must be before starts_at")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "sale_opens_at must be before starts_at")
 
     for field, value in changes.items():
         setattr(event, field, value)

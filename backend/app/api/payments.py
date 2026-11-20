@@ -27,7 +27,7 @@ def _replay(saved: IdempotencyKey, request_hash: str) -> JSONResponse:
     """Answer a repeated request with the response we already sent the first time."""
     if saved.request_hash != request_hash:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "This Idempotency-Key was already used for a different request",
         )
     return JSONResponse(status_code=saved.response_status, content=saved.response_body)
