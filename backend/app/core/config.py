@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     refresh_token_days: int = 7
     hold_minutes: int = 5
     payment_webhook_secret: str
+    mock_gateway_enabled: bool = False   # dev only: lets the website fake the payment gateway
     run_workers: bool = True             # set RUN_WORKERS=false to start the API without background jobs
     cleanup_interval_seconds: int = 30
     outbox_interval_seconds: int = 5

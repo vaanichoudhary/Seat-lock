@@ -42,6 +42,10 @@ class WebhookRequest(BaseModel):
     status: Literal["succeeded", "failed"]
 
 
+class MockGatewayRequest(BaseModel):
+    status: Literal["succeeded", "failed"]
+
+
 class WebhookResponse(BaseModel):
     payment_status: PaymentStatus
     booking_status: BookingStatus

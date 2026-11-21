@@ -24,6 +24,7 @@ if _main_db_name == TEST_DB_NAME:
     raise RuntimeError("DATABASE_URL already points at the test database")
 os.environ["DATABASE_URL"] = f"{_server_url}/{TEST_DB_NAME}"
 os.environ["RUN_WORKERS"] = "false"   # tests run the background jobs by hand
+os.environ["MOCK_GATEWAY_ENABLED"] = "false"   # off like in production; tests that need it turn it on
 
 import asyncpg  # noqa: E402
 import httpx  # noqa: E402

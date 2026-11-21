@@ -17,7 +17,7 @@ from app.core.db import get_db
 from app.models import (
     Booking, BookingStatus, IdempotencyKey, OutboxEvent, Payment, PaymentStatus, User,
 )
-from app.schemas.bookings import PaymentOut, WebhookRequest, WebhookResponse
+from app.schemas.bookings import MockGatewayRequest, PaymentOut, WebhookRequest, WebhookResponse
 from app.services.bookings import confirm_booking, release_booking
 
 router = APIRouter(tags=["payments"])
@@ -112,9 +112,36 @@ async def payment_webhook(
     # so the secret can't be guessed one character at a time
     if not hmac.compare_digest(webhook_secret, settings.payment_webhook_secret):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid webhook secret")
+    return await _apply_gateway_result(db, body.gateway_ref, body.status)
 
+
+@router.post("/payments/mock/{gateway_ref}/complete", response_model=WebhookResponse)
+async def mock_gateway_complete(
+    gateway_ref: str,
+    body: MockGatewayRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """DEV ONLY: stands in for the payment gateway's own page.
+
+    The website can't call the real webhook, because that needs the secret and
+    anything in browser code is public. So in development the logged-in buyer
+    clicks "succeed" or "fail" and this runs the same logic as the webhook.
+    """
+    if not settings.mock_gateway_enabled:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
+    owner_id = await db.scalar(
+        select(Booking.user_id).join(Payment, Payment.booking_id == Booking.id)
+        .where(Payment.gateway_ref == gateway_ref)
+    )
+    if owner_id != user.id:   # also covers "no such payment"
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown payment")
+    return await _apply_gateway_result(db, gateway_ref, body.status)
+
+
+async def _apply_gateway_result(db: AsyncSession, gateway_ref: str, outcome: str) -> WebhookResponse:
     result = await db.execute(
-        select(Payment).where(Payment.gateway_ref == body.gateway_ref).with_for_update()
+        select(Payment).where(Payment.gateway_ref == gateway_ref).with_for_update()
     )
     payment = result.scalar_one_or_none()
     if payment is None:
@@ -128,7 +155,7 @@ async def payment_webhook(
     if payment.status != PaymentStatus.PENDING:
         return WebhookResponse(payment_status=payment.status, booking_status=booking.status)
 
-    if body.status == "failed":
+    if outcome == "failed":
         payment.status = PaymentStatus.FAILED
         if booking.status == BookingStatus.PENDING:
             await release_booking(db, booking, BookingStatus.FAILED)

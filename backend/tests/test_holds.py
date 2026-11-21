@@ -93,3 +93,14 @@ async def test_release_only_frees_my_seats(client, make_user, make_event, fetch)
     seat = await fetch(Seat, a1)
     assert seat.status == SeatStatus.AVAILABLE and seat.held_by_user_id is None and seat.held_until is None
     assert (await fetch(Seat, a3)).held_by_user_id == bob.id
+
+
+async def test_my_hold_restores_selection_after_refresh(client, make_user, make_event):
+    event, alice, bob = await make_event(), await make_user(), await make_user()
+    empty = (await client.get(f"/events/{event.id}/hold", headers=alice.headers)).json()
+    assert empty == {"seat_ids": [], "held_until": None}
+
+    await hold(client, alice, event.id, event.seat_ids[:2])
+    await hold(client, bob, event.id, event.seat_ids[2:3])
+    mine = (await client.get(f"/events/{event.id}/hold", headers=alice.headers)).json()
+    assert mine["seat_ids"] == event.seat_ids[:2] and mine["held_until"] is not None

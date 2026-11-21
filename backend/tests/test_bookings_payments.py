@@ -212,3 +212,25 @@ async def test_late_payment_on_expired_booking_asks_for_refund(client, make_user
     assert await count(select(func.count()).select_from(OutboxEvent)
                        .where(OutboxEvent.event_type == "payment.refund_required")) == 1
     assert (await fetch(Seat, event.seat_ids[0])).held_by_user_id == dave.id   # Dave keeps his seat
+
+
+# ---------- dev-only mock gateway (what the website uses instead of the webhook) ----------
+async def mock_complete(client, user, gateway_ref, result):
+    return await client.post(f"/payments/mock/{gateway_ref}/complete", json={"status": result}, headers=user.headers)
+
+
+async def test_mock_gateway_is_off_unless_enabled(client, booked):
+    _, alice, booking = booked
+    payment = (await pay(client, alice, booking["id"], "alice-pay-0001")).json()
+    assert (await mock_complete(client, alice, payment["gateway_ref"], "succeeded")).status_code == 404
+
+
+async def test_mock_gateway_confirms_only_for_the_buyer(client, make_user, booked, monkeypatch):
+    monkeypatch.setattr(settings, "mock_gateway_enabled", True)
+    _, alice, booking = booked
+    bob = await make_user()
+    payment = (await pay(client, alice, booking["id"], "alice-pay-0001")).json()
+
+    assert (await mock_complete(client, bob, payment["gateway_ref"], "succeeded")).status_code == 404
+    r = await mock_complete(client, alice, payment["gateway_ref"], "succeeded")
+    assert r.json() == {"payment_status": "succeeded", "booking_status": "confirmed"}

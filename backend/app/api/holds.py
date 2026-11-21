@@ -8,7 +8,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.db import get_db
 from app.models import BookingSeat, Event, Seat, SeatStatus, User
-from app.schemas.holds import HoldRequest, HoldResponse, ReleaseResponse
+from app.schemas.holds import HoldRequest, HoldResponse, MyHoldResponse, ReleaseResponse
 
 router = APIRouter(prefix="/events", tags=["holds"])
 
@@ -68,6 +68,33 @@ async def hold_seats(
     await db.commit()
 
     return HoldResponse(event_id=event_id, seat_ids=locked_ids, held_until=held_until)
+
+
+@router.get("/{event_id}/hold", response_model=MyHoldResponse)
+async def my_hold(
+    event_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # the seats I'm holding right now that aren't in a booking yet
+    # (lets the website restore my selection after a page refresh)
+    in_booking = select(BookingSeat.seat_id).where(BookingSeat.active)
+    result = await db.execute(
+        select(Seat.id, Seat.held_until)
+        .where(
+            Seat.event_id == event_id,
+            Seat.held_by_user_id == user.id,
+            Seat.status == SeatStatus.HELD,
+            Seat.held_until > datetime.now(timezone.utc),
+            Seat.id.not_in(in_booking),
+        )
+        .order_by(Seat.id)
+    )
+    rows = result.all()
+    return MyHoldResponse(
+        seat_ids=[r.id for r in rows],
+        held_until=min((r.held_until for r in rows), default=None),
+    )
 
 
 @router.delete("/{event_id}/hold", response_model=ReleaseResponse)

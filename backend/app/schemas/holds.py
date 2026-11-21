@@ -22,5 +22,10 @@ class HoldResponse(BaseModel):
     held_until: datetime
 
 
+class MyHoldResponse(BaseModel):
+    seat_ids: list[int]              # empty if you hold nothing
+    held_until: datetime | None
+
+
 class ReleaseResponse(BaseModel):
     released: int
